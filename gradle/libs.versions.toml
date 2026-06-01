@@ -1,0 +1,19 @@
+[versions]
+agp = "9.0.1"
+coreKtx = "1.17.0"
+leanback = "1.2.0"
+glide = "4.11.0"
+libvlc = "3.7.1"
+nanohttpd = "2.3.1"
+zxing = "3.5.4"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-leanback = { group = "androidx.leanback", name = "leanback", version.ref = "leanback" }
+glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
+libvlc-all = { group = "org.videolan.android", name = "libvlc-all", version.ref = "libvlc" }
+nanohttpd = { group = "org.nanohttpd", name = "nanohttpd", version.ref = "nanohttpd" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }

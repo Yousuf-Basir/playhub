@@ -1,0 +1,34 @@
+{
+  "active_server": "low_spec_vps",
+  "servers": [
+    {
+      "name": "local",
+      "host": "0.0.0.0",
+      "port": 8085,
+      "threads": 2
+    },
+    {
+      "name": "low_spec_vps",
+      "host": "0.0.0.0",
+      "port": 8085,
+      "threads": 1
+    }
+  ],
+  "library": {
+    "video_folders": [
+      "/data/downloads"
+    ],
+    "allowed_extensions": [
+      ".mp4",
+      ".mkv",
+      ".webm",
+      ".mov"
+    ],
+    "recursive_scan": true
+  },
+  "metadata": {
+    "metadata_dir": "./metadata",
+    "tmdb_api_key": "cf8892751c69eaae1364dce952af0cb4",
+    "fetch_tmdb_posters": true
+  }
+}
