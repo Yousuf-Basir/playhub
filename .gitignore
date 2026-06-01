@@ -15,3 +15,5 @@
 local.properties
 backend/cpp-video-streamer
 backend/playhub_server/metadata
+backend/playhub_server/playhub_server
+backend/playhub_server/config.json

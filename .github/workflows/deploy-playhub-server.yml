@@ -1,0 +1,90 @@
+name: Deploy playhub_server
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "backend/playhub_server/**"
+      - ".github/workflows/deploy-playhub-server.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: playhub-server-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libssl-dev
+
+      - name: Build playhub_server
+        working-directory: backend/playhub_server
+        run: |
+          make clean
+          make
+          strip playhub_server
+          ldd playhub_server
+
+      - name: Configure SSH
+        env:
+          SSH_HOST: ${{ secrets.ORACLEVM_HOST }}
+          SSH_PORT: ${{ secrets.ORACLEVM_PORT }}
+          SSH_USER: ${{ secrets.ORACLEVM_USER }}
+          SSH_KEY: ${{ secrets.ORACLEVM_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          : "${SSH_HOST:?Missing ORACLEVM_HOST secret}"
+          : "${SSH_USER:?Missing ORACLEVM_USER secret}"
+          : "${SSH_KEY:?Missing ORACLEVM_SSH_KEY secret}"
+          SSH_PORT="${SSH_PORT:-22}"
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/oraclevm_deploy_key
+          chmod 600 ~/.ssh/oraclevm_deploy_key
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+          {
+            echo "Host oraclevm-deploy"
+            echo "  HostName $SSH_HOST"
+            echo "  Port $SSH_PORT"
+            echo "  User $SSH_USER"
+            echo "  IdentityFile ~/.ssh/oraclevm_deploy_key"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking yes"
+          } > ~/.ssh/config
+
+      - name: Deploy binary and restart service
+        env:
+          REMOTE_DIR: ${{ vars.PLAYHUB_REMOTE_DIR }}
+          SERVICE_NAME: ${{ vars.PLAYHUB_SERVICE_NAME }}
+          RELEASE_NAME: playhub_server-${{ github.sha }}
+        run: |
+          set -euo pipefail
+          REMOTE_DIR="${REMOTE_DIR:-/opt/playhub_server}"
+          SERVICE_NAME="${SERVICE_NAME:-playhub_server}"
+          REMOTE_TMP="/tmp/${RELEASE_NAME}"
+
+          scp backend/playhub_server/playhub_server "oraclevm-deploy:${REMOTE_TMP}"
+
+          ssh oraclevm-deploy \
+            "set -euo pipefail
+             sudo mkdir -p '${REMOTE_DIR}'
+             sudo install -m 0755 '${REMOTE_TMP}' '${REMOTE_DIR}/playhub_server'
+             rm -f '${REMOTE_TMP}'
+             if systemctl list-unit-files '${SERVICE_NAME}.service' >/dev/null 2>&1; then
+               sudo systemctl restart '${SERVICE_NAME}.service'
+               sudo systemctl --no-pager --lines=20 status '${SERVICE_NAME}.service'
+             else
+               echo 'Service ${SERVICE_NAME}.service not found; deployed binary only.'
+             fi"

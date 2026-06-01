@@ -30,8 +30,55 @@ make
 Run:
 
 ```sh
+cp config.example.json config.json
 ./playhub_server config.json
 ```
+
+## GitHub Actions Deployment
+
+The repository includes `.github/workflows/deploy-playhub-server.yml`.
+It builds `backend/playhub_server/playhub_server` on GitHub's Ubuntu runner, copies only that binary to the VPS, and restarts the systemd service.
+
+Required GitHub repository secrets:
+
+- `ORACLEVM_HOST`: VPS IP or DNS name
+- `ORACLEVM_USER`: SSH username
+- `ORACLEVM_SSH_KEY`: private deploy key with SSH access to the VPS
+- `ORACLEVM_PORT`: optional, defaults to `22`
+
+Optional GitHub repository variables:
+
+- `PLAYHUB_REMOTE_DIR`: defaults to `/opt/playhub_server`
+- `PLAYHUB_SERVICE_NAME`: defaults to `playhub_server`
+
+One-time VPS layout:
+
+```sh
+sudo mkdir -p /opt/playhub_server
+sudo chown root:root /opt/playhub_server
+```
+
+Example systemd service:
+
+```ini
+[Unit]
+Description=Play Hub C++ streaming server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/playhub_server
+ExecStart=/opt/playhub_server/playhub_server /opt/playhub_server/config.json
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Keep `config.json` and `metadata/` on the VPS under `/opt/playhub_server`.
+The workflow intentionally deploys only the compiled `playhub_server` binary.
+Do not commit the real `config.json`; use `config.example.json` as the repository-safe template.
 
 ## API
 
